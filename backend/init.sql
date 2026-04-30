@@ -58,3 +58,8 @@ INSERT IGNORE INTO users (id, pass, role, name, email, status, facultate, dataIn
 ('admin01', '1234', 'bibliotecar', 'Maria Ionescu', 'admin@biblioteca.ro', 'activ', '', '2024-01-01'),
 ('student01', 'pass', 'student', 'Andrei Munteanu', 'andrei.m@univ.ro', 'activ', 'Litere', '2024-09-01'),
 ('student02', 'pass', 'student', 'Elena Dumitrescu', 'elena.d@univ.ro', 'activ', 'Drept', '2024-09-05');
+
+INSERT IGNORE INTO carti (id, titlu, autor, editura, an, isbn, pagini, gen, coperta, limba, exemplare, disponibile) VALUES
+('c1', 'Dar daca... DUMNEZEU are alte planuri?', 'Charles R. Swindoll', 'Stephanus', 2022, '978-606-698-056-2', 228, 'Religie', 'Paperback', 'Romana', 2, 1),
+('c2', 'Creierul uman', 'Alexandru Vlad Ciurea', 'Bookzone', 2022, '9786069639696', 272, 'Medicina', 'Brosata', 'Romana', 1, 0),
+('c3', 'Micul Print', 'Antoine de Saint-Exupery', 'EDITURA CREATOR', 2026, '978-630-370-003-8', 98, 'Literatura Universala', 'Necartonata', 'Romana', 3, 3);

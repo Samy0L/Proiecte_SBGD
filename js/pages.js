@@ -69,6 +69,7 @@ const Pages = {
     const list  = filtered || DB.carti;
     const grid  = UI.el('cartiGrid');
     const admin = Auth.isAdmin();
+    const currentUser = Auth.getCurrent();
 
     if (!list.length) { UI.empty(grid, '📚', 'Nicio carte găsită.'); return; }
 
@@ -82,18 +83,70 @@ const Pages = {
           </div>
           <div class="book-title">${c.titlu}</div>
           <div class="book-author">${c.autor}</div>
-          <div class="book-meta">
-            <div>📕 ${c.editura} &middot; ${c.an}</div>
-            <div class="isbn">ISBN: ${c.isbn}</div>
-            <div>📄 ${c.pagini} pag. &middot; ${c.coperta} &middot; ${c.limba}</div>
-          </div>
+          ${admin ? `
+            <div class="book-meta">
+              <div>📕 ${c.editura} &middot; ${c.an}</div>
+              <div class="isbn">ISBN: ${c.isbn}</div>
+              <div>📄 ${c.pagini} pag. &middot; ${c.coperta} &middot; ${c.limba}</div>
+            </div>
+          ` : `
+            <div class="book-meta">
+              <div>📕 Editie biblioteca</div>
+              <div>📄 Detalii complete vizibile doar bibliotecarului</div>
+            </div>
+          `}
         </div>
         ${admin ? `
         <div class="book-actions">
           <button class="btn btn-ghost btn-sm" onclick="Pages.editBook('${c.id}')">✏️ Editare</button>
           <button class="btn btn-danger btn-sm" onclick="Pages.deleteBook('${c.id}')">🗑️ Șterge</button>
-        </div>` : ''}
+        </div>` : `
+        <div class="book-actions">
+          <button class="btn btn-gold btn-sm" onclick="Pages.imprumutaCarte('${c.id}')" ${(!currentUser || c.disponibile <= 0) ? 'disabled' : ''}>
+            ${c.disponibile > 0 ? '📚 Împrumută' : 'Indisponibilă'}
+          </button>
+        </div>`}
       </div>`).join('');
+  },
+
+  async imprumutaCarte(carteId) {
+    const user = Auth.getCurrent();
+    if (!user || user.role !== 'student') {
+      UI.toast('Doar studentii pot imprumuta din catalog.');
+      return;
+    }
+
+    const carte = DB.findCarte(carteId);
+    if (!carte) {
+      UI.toast('Cartea nu a fost gasita.');
+      return;
+    }
+    if (carte.disponibile <= 0) {
+      UI.toast('Aceasta carte nu este disponibila momentan.');
+      return;
+    }
+
+    const areDeja = DB.imprumuturi.some(i => i.studentId === user.id && i.carteId === carteId && i.status === 'activ');
+    if (areDeja) {
+      UI.toast('Ai deja un imprumut activ pentru aceasta carte.');
+      return;
+    }
+
+    const termen = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+    DB.imprumuturi.push({
+      id: 'i' + DB.nextId(),
+      carteId,
+      studentId: user.id,
+      dataImprumut: new Date().toISOString().split('T')[0],
+      termen,
+      status: 'activ',
+    });
+
+    carte.disponibile--;
+    DB.addLog('imprumut', `Împrumut student: "${carte.titlu}" → ${user.name}`, user.id);
+    await DB.saveState();
+    UI.toast(`Ai imprumutat: ${carte.titlu}`);
+    this.carti();
   },
 
   filterCarti() {

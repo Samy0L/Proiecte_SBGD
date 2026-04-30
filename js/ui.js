@@ -54,6 +54,12 @@ const Nav = {
   },
 
   showPage(name) {
+    const restrictedForStudents = ['istoric', 'isbn'];
+    if (Auth && !Auth.isAdmin() && restrictedForStudents.includes(name)) {
+      UI.toast('Aceasta pagina este disponibila doar bibliotecarului.');
+      name = 'dashboard';
+    }
+
     if (name !== 'isbn' && Pages && typeof Pages.stopScanner === 'function') {
       Pages.stopScanner();
     }
