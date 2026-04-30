@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BibliotecaApp — Sistem de Management</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- External libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">📚</div>
+      <h1>BibliotecaApp</h1>
+      <p>Sistem de Management al Bibliotecii</p>
+    </div>
+    <div class="gold-line"></div>
+    <div class="form-group">
+      <label class="form-label" for="loginRole">Tip Cont</label>
+      <select id="loginRole" class="form-control">
+        <option value="bibliotecar">Bibliotecar / Administrator</option>
+        <option value="student">Student</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="loginUser">ID Utilizator</label>
+      <input id="loginUser" type="text" class="form-control" placeholder="ex: admin01" value="admin01">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="loginPass">Parola</label>
+      <input id="loginPass" type="password" class="form-control" placeholder="••••••••" value="1234">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="Auth.login()">Autentificare &rarr;</button>
+    <p id="loginErr" class="login-error">ID sau parola incorecta.</p>
+    <div class="gold-line"></div>
+    <p class="login-register">
+      Esti student nou?
+      <button onclick="Auth.showRegisterScreen()">Inregistreaza-te</button>
+    </p>
+    <p class="login-hint">Demo: admin01 / 1234 &nbsp;&middot;&nbsp; student01 / pass</p>
+  </div>
+</div>
+
+<!-- REGISTER PAGE -->
+<div id="registerScreen" style="display:none;">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">📝</div>
+      <h1>Inregistrare Student</h1>
+      <p>Creeaza un cont nou pentru acces in sistem</p>
+    </div>
+    <div class="gold-line"></div>
+    <div class="form-group"><label class="form-label">Nume Complet *</label><input id="registerNume" class="form-control" placeholder="Ion Popescu"></div>
+    <div class="form-group"><label class="form-label">Email *</label><input id="registerEmail" class="form-control" type="email" placeholder="ion.popescu@univ.ro"></div>
+    <div class="form-group"><label class="form-label">ID Utilizator *</label><input id="registerId" class="form-control" placeholder="student04"></div>
+    <div class="form-group"><label class="form-label">Parola *</label><input id="registerPass" class="form-control" type="password"></div>
+    <div class="form-group"><label class="form-label">Facultate / Departament</label><input id="registerFac" class="form-control" placeholder="Facultatea de Litere"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="Auth.registerFromPage()">Trimite Cerere</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="Auth.showLoginScreen()">Inapoi la Login</button>
+    </div>
+    <p class="login-hint" style="margin-top:14px;">Contul va fi activat dupa aprobarea bibliotecarului.</p>
+  </div>
+</div>
+
+
+<!-- MAIN APP -->
+<div id="app" class="sidebar-collapsed" style="display:none;">
+  <button class="sidebar-toggle-btn" onclick="Nav.toggleSidebar()">☰ Meniu</button>
+  <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="Nav.closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">📚</span>
+      <div class="logo-text">
+        <div class="logo-name">Biblioteca</div>
+        <div class="logo-sub">Management System</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <p class="nav-section-label">Navigare</p>
+      <button id="nav-dashboard"   class="nav-item active"    onclick="Nav.showPage('dashboard')">  <span class="nav-icon">🏠</span> Dashboard</button>
+      <button id="nav-carti"       class="nav-item"           onclick="Nav.showPage('carti')">      <span class="nav-icon">📖</span> Catalog Carti</button>
+      <button id="nav-studenti"    class="nav-item admin-only" onclick="Nav.showPage('studenti')">  <span class="nav-icon">🎓</span> Studenti</button>
+      <button id="nav-imprumuturi" class="nav-item"           onclick="Nav.showPage('imprumuturi')"><span class="nav-icon">🔄</span> Imprumuturi</button>
+      <button id="nav-aprobari"    class="nav-item admin-only" onclick="Nav.showPage('aprobari')">  <span class="nav-icon">✅</span> Aprobari <span id="pendingBadge" class="badge hidden">0</span></button>
+      <button id="nav-istoric"     class="nav-item"           onclick="Nav.showPage('istoric')">    <span class="nav-icon">📋</span> Istoric &amp; Jurnale</button>
+      <button id="nav-isbn"        class="nav-item"           onclick="Nav.showPage('isbn')">       <span class="nav-icon">🔖</span> Generator ISBN</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">B</div>
+        <div>
+          <div class="user-name" id="userNameDisplay">Bibliotecar</div>
+          <div class="user-role" id="userRoleDisplay">Administrator</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="Auth.logout()">&larr; Deconectare</button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p>Bun venit! Rezumat activitate biblioteca.</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-value" id="statTotalCarti">0</div><div class="stat-label">Total Carti</div></div>
+        <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-value" id="statTotalStudenti">0</div><div class="stat-label">Studenti Activi</div></div>
+        <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-value" id="statImprumuturi">0</div><div class="stat-label">Imprumuturi Active</div></div>
+        <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value danger" id="statIntarzieri">0</div><div class="stat-label">Restituiri Intarziate</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card"><div class="card-header"><h2>Activitate Recenta</h2></div><div class="card-body"><div id="recentActivity" class="activity-list"></div></div></div>
+        <div class="card"><div class="card-header"><h2>Carti Recente</h2></div><div class="card-body" id="recentBooks"></div></div>
+      </div>
+    </div>
+
+    <!-- CARTI -->
+    <div id="page-carti" class="page">
+      <div class="page-header page-header-row">
+        <div><h1>Catalog Carti</h1><p>Gestioneaza colectia bibliotecii</p></div>
+        <button class="btn btn-primary admin-only" onclick="Pages.showAddBookModal()">+ Adauga Carte</button>
+      </div>
+      <div class="filter-bar">
+        <input id="searchCarti" class="form-control" type="text" placeholder="Cauta titlu, autor, ISBN..." oninput="Pages.filterCarti()">
+        <select id="filterGen" class="form-control" onchange="Pages.filterCarti()">
+          <option value="">Toate Genurile</option>
+          <option>Literatura Universala</option><option>Religie</option><option>Medicina</option>
+          <option>Stiinte</option><option>Fictiune</option><option>Nonfictiune</option>
+          <option>Informatica</option><option>Istorie</option><option>Arta</option>
+        </select>
+        <select id="filterStatus" class="form-control" onchange="Pages.filterCarti()">
+          <option value="">Toate Statusurile</option>
+          <option value="disponibila">Disponibila</option>
+          <option value="imprumutata">Imprumutata</option>
+        </select>
+      </div>
+      <div id="cartiGrid" class="three-col"></div>
+    </div>
+
+    <!-- STUDENTI -->
+    <div id="page-studenti" class="page">
+      <div class="page-header"><h1>Studenti</h1><p>Gestioneaza inregistrarile studentilor</p></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Student</th><th>Email</th><th>Data Inreg.</th><th>Status</th><th>Imprumuturi</th><th>Actiuni</th></tr></thead>
+            <tbody id="studentiTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPRUMUTURI -->
+    <div id="page-imprumuturi" class="page">
+      <div class="page-header page-header-row">
+        <div><h1>Imprumuturi</h1><p>Gestioneaza imprumuturile si restituirile</p></div>
+        <button class="btn btn-primary admin-only" onclick="Pages.showImprumutModal()">+ Nou Imprumut</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Carte</th><th>Student</th><th>Data Imprumut</th><th>Termen</th><th>Status</th><th>Actiuni</th></tr></thead>
+            <tbody id="imprumututriTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- APROBARI -->
+    <div id="page-aprobari" class="page">
+      <div class="page-header"><h1>Sistem de Aprobari</h1><p>Aproba inregistrarile si solicitarile studentilor</p></div>
+      <div class="two-col">
+        <div class="card"><div class="card-header"><h2>Studenti Noi</h2></div><div class="card-body" id="pendingStudents"></div></div>
+        <div class="card"><div class="card-header"><h2>Solicitari Extindere Termen</h2></div><div class="card-body" id="extendRequests"></div></div>
+      </div>
+    </div>
+
+    <!-- ISTORIC -->
+    <div id="page-istoric" class="page">
+      <div class="page-header"><h1>Istoric &amp; Jurnale</h1><p>Istoricul complet al tranzactiilor bibliotecii</p></div>
+      <div class="filter-bar">
+        <input id="searchIstoric" class="form-control" type="text" placeholder="Cauta in jurnal..." oninput="Pages.filterIstoric()">
+        <select id="filterTipIstoric" class="form-control" onchange="Pages.filterIstoric()">
+          <option value="">Toate Tipurile</option>
+          <option value="imprumut">Imprumut</option><option value="restituire">Restituire</option>
+          <option value="aprobare">Aprobare</option><option value="adaugare">Adaugare Carte</option>
+        </select>
+        <span id="totalLogs" class="text-muted text-small" style="margin-left:auto;"></span>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data &amp; Ora</th><th>Tip</th><th>Descriere</th><th>Utilizator</th></tr></thead>
+            <tbody id="istoricTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ISBN -->
+    <div id="page-isbn" class="page">
+      <div class="page-header"><h1>Generator ISBN / Coduri de Bare</h1><p>Genereaza coduri de bare EAN-13 si QR din ISBN</p></div>
+      <div class="isbn-grid">
+        <div class="card card-body">
+          <h2 style="font-size:18px;margin-bottom:16px;">Generare din ISBN</h2>
+          <div class="form-group"><label class="form-label">ISBN</label><input id="isbnInput" class="form-control" type="text" placeholder="ex: 978-630-370-003-8" value="978-630-370-003-8"></div>
+          <div class="form-group"><label class="form-label">Titlu (optional)</label><input id="isbnTitle" class="form-control" type="text" placeholder="Titlul cartii..."></div>
+          <div style="display:flex;gap:10px;margin-bottom:24px;">
+            <button class="btn btn-primary" onclick="Pages.generateBarcode()">Cod de Bare</button>
+            <button class="btn btn-outline" onclick="Pages.generateQR()">QR Code</button>
+          </div>
+          <div class="divider"></div>
+          <p class="form-label" style="margin-bottom:10px;">Scanner cod carte</p>
+          <div class="scanner-actions">
+            <button id="scanStartBtn" class="btn btn-primary" onclick="Pages.startScanner()">Porneste Scanner</button>
+            <button id="scanStopBtn" class="btn btn-ghost" onclick="Pages.stopScanner()" disabled>Opreste</button>
+          </div>
+          <div id="scannerReader" class="scanner-reader hidden"></div>
+          <p id="scanStatus" class="scanner-status">Scaneaza codul ISBN de pe carte pentru cautare rapida in catalog.</p>
+          <button id="openScannedBookBtn" class="btn btn-gold btn-sm hidden" onclick="Pages.openScannedBookInCatalog()">Deschide cartea in catalog</button>
+          <div class="divider"></div>
+          <p class="form-label" style="margin-bottom:10px;">ISBN-uri din catalog</p>
+          <div id="isbnList" style="display:flex;flex-direction:column;gap:7px;"></div>
+        </div>
+        <div class="card card-body">
+          <h2 style="font-size:18px;margin-bottom:16px;">Previzualizare</h2>
+          <div id="barcodePreview"><p class="preview-empty">Apasa "Cod de Bare" sau "QR Code" pentru a genera.</p></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+
+<!-- MODALS -->
+
+<!-- Register -->
+<div id="regModal" class="modal-overlay">
+  <div class="modal-box">
+    <h2 class="modal-title">Inregistrare Student</h2>
+    <div class="form-group"><label class="form-label">Nume Complet *</label><input id="regNume" class="form-control" placeholder="Ion Popescu"></div>
+    <div class="form-group"><label class="form-label">Email *</label><input id="regEmail" class="form-control" type="email" placeholder="ion.popescu@univ.ro"></div>
+    <div class="form-group"><label class="form-label">ID Utilizator *</label><input id="regId" class="form-control" placeholder="student04"></div>
+    <div class="form-group"><label class="form-label">Parola *</label><input id="regPass" class="form-control" type="password"></div>
+    <div class="form-group"><label class="form-label">Facultate / Departament</label><input id="regFac" class="form-control" placeholder="Facultatea de Litere"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="Auth.doRegister()">Trimite Cerere</button>
+      <button class="btn btn-ghost" onclick="Modal.close('regModal')">Anulare</button>
+    </div>
+    <p class="modal-note">Contul va fi activat dupa aprobarea bibliotecarului.</p>
+  </div>
+</div>
+
+<!-- Add / Edit Book -->
+<div id="bookModal" class="modal-overlay">
+  <div class="modal-box wide">
+    <h2 class="modal-title" id="bookModalTitle">Adauga Carte</h2>
+    <input type="hidden" id="bookEditId">
+    <div class="form-grid">
+      <div class="form-group form-full"><label class="form-label">Titlu *</label><input id="bookTitlu" class="form-control" placeholder="Titlul cartii"></div>
+      <div class="form-group"><label class="form-label">Autor *</label><input id="bookAutor" class="form-control" placeholder="Autorul"></div>
+      <div class="form-group"><label class="form-label">Editura</label><input id="bookEditura" class="form-control" placeholder="Editura"></div>
+      <div class="form-group"><label class="form-label">ISBN</label><input id="bookISBN" class="form-control" placeholder="978-xxx-xxx-xxx-x"></div>
+      <div class="form-group"><label class="form-label">An Aparitie</label><input id="bookAn" class="form-control" type="number" placeholder="2024"></div>
+      <div class="form-group"><label class="form-label">Nr. Pagini</label><input id="bookPagini" class="form-control" type="number" placeholder="200"></div>
+      <div class="form-group"><label class="form-label">Gen / Categorie</label>
+        <select id="bookGen" class="form-control">
+          <option>Literatura Universala</option><option>Religie</option><option>Medicina</option>
+          <option>Stiinte</option><option>Fictiune</option><option>Nonfictiune</option>
+          <option>Informatica</option><option>Istorie</option><option>Arta</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Tip Coperta</label>
+        <select id="bookCoperta" class="form-control">
+          <option>Paperback</option><option>Brosata</option><option>Cartonata</option><option>Necartonata</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Limba</label>
+        <select id="bookLimba" class="form-control">
+          <option>Romana</option><option>Engleza</option><option>Franceza</option><option>Alta</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Exemplare Disponibile</label><input id="bookExemplare" class="form-control" type="number" value="1"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="Pages.saveBook()">Salveaza</button>
+      <button class="btn btn-ghost" onclick="Modal.close('bookModal')">Anulare</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Imprumut -->
+<div id="imprumutModal" class="modal-overlay">
+  <div class="modal-box">
+    <h2 class="modal-title">Nou Imprumut</h2>
+    <div class="form-group"><label class="form-label">Carte</label><select id="imprumutCarte" class="form-control"></select></div>
+    <div class="form-group"><label class="form-label">Student</label><select id="imprumutStudent" class="form-control"></select></div>
+    <div class="form-group"><label class="form-label">Termen Restituire</label><input id="imprumutTermen" class="form-control" type="date"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="Pages.saveImprumut()">Confirma Imprumut</button>
+      <button class="btn btn-ghost" onclick="Modal.close('imprumutModal')">Anulare</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Scripts (order matters!) -->
+<script src="js/db.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/pages.js"></script>
+
+</body>
+</html>
